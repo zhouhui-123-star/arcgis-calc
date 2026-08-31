@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Territories PV Capacity & Benefit Estimator</title>
     <style>
-        :root {
+        : root {
             --hk-green: #2e7d32;
             --hk-green-hover: #1b5e20;
             --arcgis-blue: #0079c1;
@@ -218,7 +218,7 @@
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
             <div class="slider-container">
-                <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
+                <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)" onchange="updateSlider(this.value)">
             </div>
         </div>
         <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
@@ -288,18 +288,20 @@
 
 <script>
     function updateSlider(val) {
-        document.getElementById('ratioVal').innerText = val;
+        var ratioValEl = document.getElementById('ratioVal');
+        if (ratioValEl) ratioValEl.innerText = val;
         updateCalculation();
     }
 
     function updateCalculation() {
-        // Fetch input values safely
-        const roofArea = parseFloat(document.getElementById('roofArea').value) || 0;
-        
-        // 核心安全修正：加入 NaN 的兜底值 (如果拿不到滑块数值，默认按 55% 计算)
-        const sliderEl = document.getElementById('spaceRatio');
-        const sliderValue = sliderEl ? parseFloat(sliderEl.value) : 55;
-        const spaceRatio = (isNaN(sliderValue) ? 55 : sliderValue) / 100;
-        
-        const annualUse = parseFloat(document.getElementById('annualUse').value) || 0;
-        const annualCarbon = parseFloat(document.getElementById('annualCarbon').value) || 0;
+        // 1. 安全獲取輸入框 DOM 節點，若拿不到則直接中斷，等待下一次定時器觸發
+        var roofAreaEl = document.getElementById('roofArea');
+        var spaceRatioEl = document.getElementById('spaceRatio');
+        var annualUseEl = document.getElementById('annualUse');
+        var annualCarbonEl = document.getElementById('annualCarbon');
+
+        if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
+            return; // 節點未準備好，安全退出
+        }
+
+        // 2. 讀取並轉換數值
