@@ -171,19 +171,42 @@
             transition: width 0.3s;
         }
 
+        /* Project Benchmarking Alert & Ref Card */
+        .gov-benchmark {
+            font-size: 0.7rem;
+            margin-top: 8px;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        .status-pass { color: #2e7d32; }
+        .status-warn { color: #b71c1c; }
+        
+        .ref-tag {
+            font-size: 0.6rem;
+            color: #777777;
+            font-weight: normal;
+            font-style: italic;
+            max-width: 180px;
+            line-height: 1.2;
+        }
+
         .note {
             font-size: 0.7rem;
             color: #888888;
             margin-top: 15px;
             text-align: justify;
-            line-height: 1.3;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">New Territories, Hong Kong</span></h2>
+    <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">San Tin / Lok Ma Chau Development Node, HK</span></h2>
     
     <!-- Input Parameters -->
     <div class="section-title">⚙️ Input Parameters</div>
@@ -198,13 +221,15 @@
                 <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
             </div>
         </div>
-        <div class="input-group">
-            <label for="annualUse">Annual Consumption (kWh)</label>
-            <input type="number" id="annualUse" value="2177310" oninput="updateCalculation()">
-        </div>
-        <div class="input-group">
-            <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-            <input type="number" id="annualCarbon" value="609599" oninput="updateCalculation()">
+        <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
+            <div class="input-group">
+                <label for="annualUse">Annual Consumption (kWh)</label>
+                <input type="number" id="annualUse" value="2177310" oninput="updateCalculation()">
+            </div>
+            <div class="input-group">
+                <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
+                <input type="number" id="annualCarbon" value="609599" oninput="updateCalculation()">
+            </div>
         </div>
     </div>
 
@@ -241,6 +266,9 @@
                 <div class="hl-title">⚡ Solar Self-Sufficiency</div>
                 <div class="hl-value" id="ssrVal">0%</div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" id="ssrBar"></div></div>
+                
+                <!-- Dynamic Project Standard Comparison (25% Target) -->
+                <div class="gov-benchmark" id="govStatus"></div>
             </div>
             <div>
                 <div class="hl-title">📉 Annual CO₂ Reduction</div>
@@ -250,7 +278,12 @@
         </div>
     </div>
 
-    <div class="note">* Note: Estimation is based on the meteorological baseline of 1,050 annual peak sun hours in the New Territories, HK. The system footprint assumes 5 m² of net area per 1 kWp for standard high-efficiency monocrystalline modules.</div>
+    <!-- Compliant Legal Reference Note -->
+    <div class="note">
+        <strong>* Technical References:</strong><br>
+        1. Meteorological baseline assumes 1,050 annual peak sun hours in the New Territories, HK, with a footprint allocation of 5 m² per 1 kWp.<br>
+        2. Compliance targeting is aligned with <strong>Joint Circular Ref. DEVB(W) 517/94/09 & EEB 7/2061/08</strong>, which mandates that for all new open space and public park projects, at least 25% of general public lighting electricity must be provided by renewable energy.
+    </div>
 </div>
 
 <script>
@@ -271,34 +304,3 @@
         const capacity = netArea / 5; // 5 m² required per 1 kWp
 
         // 2. Generation (1,050 hours baseline)
-        const annualGen = capacity * 1050;
-
-        // 3. Impact Assessment
-        let ssr = 0;
-        if (annualUse > 0) {
-            ssr = (annualGen / annualUse) * 100;
-        }
-        
-        const carbonSavedKg = (ssr / 100) * annualCarbon;
-        const carbonSavedTons = carbonSavedKg / 1000;
-
-        // 4. Render to UI
-        document.getElementById('netArea').innerText = Math.round(netArea).toLocaleString() + ' m²';
-        document.getElementById('capacity').innerText = Math.round(capacity).toLocaleString() + ' kWp';
-        document.getElementById('annualGen').innerText = Math.round(annualGen).toLocaleString() + ' kWh/year';
-        
-        // Caps bar display at 100%
-        const displaySsr = ssr > 100 ? 100 : ssr;
-        document.getElementById('ssrVal').innerText = ssr.toFixed(1) + '%';
-        document.getElementById('ssrBar').style.width = displaySsr + '%';
-        
-        document.getElementById('carbonReduce').innerText = carbonSavedTons.toFixed(1) + ' Tons';
-        document.getElementById('carbonPercent').innerText = '(Offsets ' + ssr.toFixed(1) + '%)';
-    }
-
-    // Initial Trigger
-    updateCalculation();
-</script>
-
-</body>
-</html>
