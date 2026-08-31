@@ -82,6 +82,11 @@
             border-color: var(--hk-green);
         }
 
+        input[type="number"].error {
+            border-color: #d32f2f;
+            background-color: #ffebee;
+        }
+
         .slider-container {
             display: flex;
             align-items: center;
@@ -201,6 +206,17 @@
             text-align: justify;
             line-height: 1.4;
         }
+
+        .error-message {
+            font-size: 0.7rem;
+            color: #d32f2f;
+            margin-top: 3px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -213,7 +229,8 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
-            <input type="number" id="roofArea" value="4119" oninput="updateCalculation()">
+            <input type="number" id="roofArea" value="4119" min="0" oninput="updateCalculation()">
+            <div class="error-message" id="roofAreaError">Value must be ≥ 0</div>
         </div>
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
@@ -224,11 +241,13 @@
         <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
             <div class="input-group">
                 <label for="annualUse">Annual Consumption (kWh)</label>
-                <input type="number" id="annualUse" value="2177310" oninput="updateCalculation()">
+                <input type="number" id="annualUse" value="2177310" min="0" oninput="updateCalculation()">
+                <div class="error-message" id="annualUseError">Value must be ≥ 0</div>
             </div>
             <div class="input-group">
                 <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-                <input type="number" id="annualCarbon" value="609599" oninput="updateCalculation()">
+                <input type="number" id="annualCarbon" value="609599" min="0" oninput="updateCalculation()">
+                <div class="error-message" id="annualCarbonError">Value must be ≥ 0</div>
             </div>
         </div>
     </div>
@@ -287,78 +306,145 @@
 </div>
 
 <script>
+    // ========== Configuration Constants ==========
+    const CONFIG = {
+        PEAK_SUN_HOURS: 1050,        // Annual peak sun hours in New Territories, HK
+        M2_PER_KWP: 5,                // Square meters required per 1 kWp capacity
+        TARGET_SSR_PERCENT: 25.0,     // Government compliance target (Joint Circular)
+        MAX_SSR_DISPLAY: 100,         // Maximum SSR percentage for progress bar display
+        RECALC_DELAY_MS: 500          // Delay for iframe sandbox compatibility
+    };
+
+    // ========== Input Validation ==========
+    function validateInput(elementId, value) {
+        const element = document.getElementById(elementId);
+        const errorElement = document.getElementById(elementId + 'Error');
+        
+        if (!element || !errorElement) return value;
+
+        const numValue = parseFloat(value);
+        const isValid = !isNaN(numValue) && numValue >= 0;
+
+        if (isValid) {
+            element.classList.remove('error');
+            errorElement.classList.remove('show');
+            return Math.max(0, numValue);
+        } else {
+            element.classList.add('error');
+            errorElement.classList.add('show');
+            return 0;
+        }
+    }
+
+    // ========== Main Calculation Logic ==========
     function updateCalculation() {
-    // Fetch input values safely
-    const roofAreaEl = document.getElementById('roofArea');
-    const spaceRatioEl = document.getElementById('spaceRatio');
-    const annualUseEl = document.getElementById('annualUse');
-    const annualCarbonEl = document.getElementById('annualCarbon');
+        // Fetch and validate input elements
+        const roofAreaEl = document.getElementById('roofArea');
+        const spaceRatioEl = document.getElementById('spaceRatio');
+        const annualUseEl = document.getElementById('annualUse');
+        const annualCarbonEl = document.getElementById('annualCarbon');
 
-    // If DOM elements are not rendered yet, exit gracefully
-    if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
-        return;
+        // Exit gracefully if DOM elements are not rendered yet
+        if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
+            return;
+        }
+
+        // Parse and validate inputs
+        const roofArea = validateInput('roofArea', roofAreaEl.value);
+        const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
+        const annualUse = validateInput('annualUse', annualUseEl.value);
+        const annualCarbon = validateInput('annualCarbon', annualCarbonEl.value);
+
+        // ========== 1. PV Area & Capacity Layout ==========
+        const netArea = roofArea * spaceRatio;
+        const capacity = netArea / CONFIG.M2_PER_KWP;
+
+        // ========== 2. Annual Generation Estimation ==========
+        const annualGen = capacity * CONFIG.PEAK_SUN_HOURS;
+        
+        // ========== 3. Impact Assessment ==========
+        let ssr = 0;
+        if (annualUse > 0) {
+            ssr = (annualGen / annualUse) * 100;
+        }
+        
+        const carbonSavedKg = (ssr / 100) * annualCarbon;
+        const carbonSavedTons = carbonSavedKg / 1000;
+        
+        // ========== 4. Update UI Output ==========
+        updateOutputDisplay(netArea, capacity, annualGen, ssr, carbonSavedTons);
+        
+        // ========== 5. Update Compliance Status ==========
+        updateComplianceStatus(ssr);
     }
 
-    const roofArea = parseFloat(roofAreaEl.value) || 0;
-    const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
-    const annualUse = parseFloat(annualUseEl.value) || 0;
-    const annualCarbon = parseFloat(annualCarbonEl.value) || 0;
-
-    // 1. Area & Capacity Layout
-    const netArea = roofArea * spaceRatio;
-    const capacity = netArea / 5; // 5 m² required per 1 kWp
-
-    // 2. Generation (1,050 hours baseline)
-    const annualGen = capacity * 1050;
-    
-    // 3. Impact Assessment
-    let ssr = 0;
-    if (annualUse > 0) {
-        ssr = (annualGen / annualUse) * 100;
+    // ========== UI Update Functions ==========
+    function updateOutputDisplay(netArea, capacity, annualGen, ssr, carbonSavedTons) {
+        // Update capacity and generation displays
+        safeUpdateElement('netArea', Math.round(netArea).toLocaleString() + ' m²');
+        safeUpdateElement('capacity', Math.round(capacity).toLocaleString() + ' kWp');
+        safeUpdateElement('annualGen', Math.round(annualGen).toLocaleString() + ' kWh/year');
+        
+        // Update self-sufficiency ratio (cap display at 100%)
+        const displaySsr = ssr > CONFIG.MAX_SSR_DISPLAY ? CONFIG.MAX_SSR_DISPLAY : ssr;
+        safeUpdateElement('ssrVal', ssr.toFixed(1) + '%');
+        
+        const ssrBar = document.getElementById('ssrBar');
+        if (ssrBar) {
+            ssrBar.style.width = displaySsr + '%';
+        }
+        
+        // Update carbon reduction metrics
+        safeUpdateElement('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
+        safeUpdateElement('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
     }
-    const carbonSavedKg = (ssr / 100) * annualCarbon;
-    const carbonSavedTons = carbonSavedKg / 1000;
-    
-    // 4. Render to UI
-    document.getElementById('netArea').innerText = Math.round(netArea).toLocaleString() + ' m²';
-    document.getElementById('capacity').innerText = Math.round(capacity).toLocaleString() + ' kWp';
-    document.getElementById('annualGen').innerText = Math.round(annualGen).toLocaleString() + ' kWh/year';
-    
-    // Caps bar display at 100%
-    const displaySsr = ssr > 100 ? 100: ssr;
-    document.getElementById('ssrVal').innerText = ssr.toFixed(1) + '%';
-    document.getElementById('ssrBar').style.width = displaySsr + '%';
-    document.getElementById('carbonReduce').innerText = carbonSavedTons.toFixed(1) + ' Tons';
-    document.getElementById('carbonPercent').innerText = '(Offsets ' + ssr.toFixed(1) + '%)';
-    
-    // 5. Dynamic Joint Circular Benchmarking Logic (25% Target)
-    const govStatusEl = document.getElementById('govStatus');
-    const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
-    
-    if (ssr >= 25.0) {
-        govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (25%)</span>' + circularRef;
-    } else {
-        govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (25%)</span>' + circularRef;
+
+    function updateComplianceStatus(ssr) {
+        const govStatusEl = document.getElementById('govStatus');
+        if (!govStatusEl) return;
+
+        const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
+        
+        if (ssr >= CONFIG.TARGET_SSR_PERCENT) {
+            govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (' + 
+                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+        } else {
+            govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (' + 
+                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+        }
     }
-}
 
-// Slider Interactivity Trigger
-function updateSlider(val) {
-    const ratioValEl = document.getElementById('ratioVal');
-    if (ratioValEl) ratioValEl.innerText = val;
+    function safeUpdateElement(id, content) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.innerHTML = content;
+        }
+    }
+
+    // ========== Slider Interactivity ==========
+    function updateSlider(val) {
+        const ratioValEl = document.getElementById('ratioVal');
+        if (ratioValEl) {
+            ratioValEl.innerText = val;
+        }
+        updateCalculation();
+    }
+
+    // ========== Initialization (Multi-trigger for iframe compatibility) ==========
+    
+    // Trigger 1: Standard DOM ready event
+    window.addEventListener('DOMContentLoaded', function() {
+        updateCalculation();
+    });
+
+    // Trigger 2: Delayed execution for ArcGIS iframe sandbox compatibility
+    setTimeout(function() {
+        updateCalculation();
+    }, CONFIG.RECALC_DELAY_MS);
+
+    // Trigger 3: Immediate fallback
     updateCalculation();
-}
-
-// === Sandbox Safe Double Trigger Execution ===
-window.addEventListener('DOMContentLoaded', function() {
-    updateCalculation();
-});
-
-// Force recalculate after 500ms to guarantee rendering inside ArcGIS iFrame sandbox
-setTimeout(function() {
-    updateCalculation();
-}, 500);
-
-// Immediate fallback trigger
-updateCalculation();
 </script>
+
+</body>
+</html>
