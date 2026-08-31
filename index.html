@@ -1,31 +1,314 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant-HK">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArcGIS 計算器測試</title>
+    <title>香港新界地區 PV 佈設與裝機量估算</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
-        .box { max-width: 280px; padding: 15px; border: 1px solid #ccc; background: #fff; border-radius: 8px; }
-        input { width: 60px; padding: 5px; margin: 5px; }
-        button { padding: 6px 12px; background: #0079c1; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-        #result { margin-top: 15px; font-weight: bold; color: #0079c1; }
+        :root {
+            --hk-green: #2e7d32;
+            --hk-green-hover: #1b5e20;
+            --arcgis-blue: #0079c1;
+            --bg-light: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #222222;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: "Avenir Next", "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            margin: 0;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 550px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            border-top: 6px solid var(--hk-green);
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--hk-green);
+            font-size: 1.3rem;
+            text-align: center;
+            border-bottom: 2px solid #e8f5e9;
+            padding-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--arcgis-blue);
+            margin: 15px 0 10px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group.full-width {
+            grid-column: span 2;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--hk-green);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--hk-green);
+        }
+
+        .slider-val {
+            font-weight: bold;
+            color: var(--hk-green);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* 結果區塊樣式 */
+        .result-card {
+            background: #f9fbf9;
+            border: 1px solid #e8f5e9;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .result-num {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1b5e20;
+        }
+
+        /* 核心指標大字 */
+        .highlight-box {
+            background: #edf7ed;
+            border-left: 4px solid var(--hk-green);
+            padding: 12px;
+            border-radius: 0 6px 6px 0;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .hl-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .hl-value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--hk-green);
+            margin: 4px 0;
+        }
+
+        /* 進度條 */
+        .progress-bar-bg {
+            background: #dbeded;
+            border-radius: 10px;
+            height: 6px;
+            width: 80%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            background: var(--hk-green);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .note {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 12px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h3>簡單加法器</h3>
-        <input type="number" id="n1" placeholder="數字1"> +
-        <input type="number" id="n2" placeholder="數字2">
-        <button onclick="calc()">計算</button>
-        <div id="result">結果：</div>
+
+<div class="container">
+    <h2>🌱 新界建築光伏(PV)容量與效益估算</h2>
+    
+    <!-- 輸入參數 -->
+    <div class="section-title">⚙️ 輸入評估參數</div>
+    <div class="input-grid">
+        <div class="input-group">
+            <label for="roofArea">屋頂總面積 ($m^2$)</label>
+            <input type="number" id="roofArea" value="4119" oninput="updateCalculation()">
+        </div>
+        <div class="input-group">
+            <label>空間利用率 (<span id="ratioVal">55</span>%)</label>
+            <div class="slider-container">
+                <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="annualUse">大樓年用電量 (kWh)</label>
+            <input type="number" id="annualUse" value="2177310" oninput="updateCalculation()">
+        </div>
+        <div class="input-group">
+            <label for="annualCarbon">原年運營碳排 (kg $CO_2e$)</label>
+            <input type="number" id="annualCarbon" value="609599" oninput="updateCalculation()">
+        </div>
     </div>
-    <script>
-        function calc() {
-            var v1 = parseFloat(document.getElementById('n1').value) || 0;
-            var v2 = parseFloat(document.getElementById('n2').value) || 0;
-            document.getElementById('result').innerText = "結果：" + (v1 + v2);
+
+    <!-- 輸出結果 -->
+    <div class="section-title">📊 實際佈設與容量估算</div>
+    <div class="result-card">
+        <div class="result-row">
+            <span class="result-label">光伏板淨鋪設面積</span>
+            <span class="result-num" id="netArea">0 $m^2$</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">可安裝系統容量 (kWp)</span>
+            <span class="result-num" id="capacity">0 kWp</span>
+        </div>
+    </div>
+
+    <div class="section-title">☀️ 預期年發電量（新界氣象基準）</div>
+    <div class="result-card">
+        <div class="result-row">
+            <span class="result-label">年有效利用小時數</span>
+            <span class="result-num" style="color:var(--text-main)">1,050 小時</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">預估年總發電量</span>
+            <span class="result-num" id="annualGen" style="color:#0079c1">0 kWh/年</span>
+        </div>
+    </div>
+
+    <!-- 核心指標 -->
+    <div class="highlight-box">
+        <div class="highlight-grid">
+            <div>
+                <div class="hl-title">⚡ 綠電自給率</div>
+                <div class="hl-value" id="ssrVal">0%</div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="ssrBar"></div></div>
+            </div>
+            <div>
+                <div class="hl-title">📉 每年碳排放減少</div>
+                <div class="hl-value" id="carbonReduce">0 噸</div>
+                <div class="hl-title" id="carbonPercent" style="font-size:0.75rem; margin-top:2px;">(抵消 0%)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="note">※ 註：本計算基於新界平均年有效光照1,050小時，高效單晶矽組件每 1 kWp 佔用 5 $m^2$ 淨面積估算。</div>
+</div>
+
+<script>
+    function updateSlider(val) {
+        document.getElementById('ratioVal').innerText = val;
+        updateCalculation();
+    }
+
+    function updateCalculation() {
+        // 獲取輸入值
+        const roofArea = parseFloat(document.getElementById('roofArea').value) || 0;
+        const spaceRatio = parseFloat(document.getElementById('spaceRatio').value) / 100;
+        const annualUse = parseFloat(document.getElementById('annualUse').value) || 0;
+        const annualCarbon = parseFloat(document.getElementById('annualCarbon').value) || 0;
+
+        // 1. 面積與容量計算
+        const netArea = roofArea * spaceRatio;
+        const capacity = netArea / 5; // 每 1 kWp 需 5 平方米
+
+        // 2. 發電量計算（新界氣象基準 1050 小時）
+        const annualGen = capacity * 1050;
+
+        // 3. 效益評估
+        let ssr = 0;
+        if (annualUse > 0) {
+            ssr = (annualGen / annualUse) * 100;
         }
-    </script>
+        
+        const carbonSavedKg = (ssr / 100) * annualCarbon;
+        const carbonSavedTons = carbonSavedKg / 1000;
+
+        // 4. 渲染到 UI
+        document.getElementById('netArea').innerText = Math.round(netArea).toLocaleString() + ' ㎡';
+        document.getElementById('capacity').innerText = Math.round(capacity).toLocaleString() + ' kWp';
+        document.getElementById('annualGen').innerText = Math.round(annualGen).toLocaleString() + ' kWh/年';
+        
+        // 限制自給率顯示不超過 100%
+        const displaySsr = ssr > 100 ? 100 : ssr;
+        document.getElementById('ssrVal').innerText = ssr.toFixed(1) + '%';
+        document.getElementById('ssrBar').style.width = displaySsr + '%';
+        
+        document.getElementById('carbonReduce').innerText = carbonSavedTons.toFixed(1) + ' 噸';
+        document.getElementById('carbonPercent').innerText = '(抵消 ' + ssr.toFixed(1) + '%)';
+    }
+
+    // 初始化首次計算
+    updateCalculation();
+</script>
+
 </body>
 </html>
