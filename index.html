@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Territories PV Capacity & Benefit Estimator</title>
     <style>
-        : root {
+        :root {
             --hk-green: #2e7d32;
             --hk-green-hover: #1b5e20;
             --arcgis-blue: #0079c1;
@@ -218,7 +218,7 @@
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
             <div class="slider-container">
-                <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)" onchange="updateSlider(this.value)">
+                <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
             </div>
         </div>
         <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
@@ -238,11 +238,11 @@
     <div class="result-card">
         <div class="result-row">
             <span class="result-label">Net PV Panel Area</span>
-            <span class="result-num" id="netArea">-- m²</span>
+            <span class="result-num" id="netArea">0 m²</span>
         </div>
         <div class="result-row">
             <span class="result-label">Est. System Capacity (kWp)</span>
-            <span class="result-num" id="capacity">-- kWp</span>
+            <span class="result-num" id="capacity">0 kWp</span>
         </div>
     </div>
 
@@ -255,7 +255,7 @@
         </div>
         <div class="result-row">
             <span class="result-label">Total Annual Generation</span>
-            <span class="result-num" id="annualGen" style="color:#0079c1">-- kWh/year</span>
+            <span class="result-num" id="annualGen" style="color:#0079c1">0 kWh/year</span>
         </div>
     </div>
 
@@ -287,21 +287,78 @@
 </div>
 
 <script>
-    function updateSlider(val) {
-        var ratioValEl = document.getElementById('ratioVal');
-        if (ratioValEl) ratioValEl.innerText = val;
-        updateCalculation();
+    function updateCalculation() {
+    // Fetch input values safely
+    const roofAreaEl = document.getElementById('roofArea');
+    const spaceRatioEl = document.getElementById('spaceRatio');
+    const annualUseEl = document.getElementById('annualUse');
+    const annualCarbonEl = document.getElementById('annualCarbon');
+
+    // If DOM elements are not rendered yet, exit gracefully
+    if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
+        return;
     }
 
-    function updateCalculation() {
-        // 1. 安全獲取輸入框 DOM 節點，若拿不到則直接中斷，等待下一次定時器觸發
-        var roofAreaEl = document.getElementById('roofArea');
-        var spaceRatioEl = document.getElementById('spaceRatio');
-        var annualUseEl = document.getElementById('annualUse');
-        var annualCarbonEl = document.getElementById('annualCarbon');
+    const roofArea = parseFloat(roofAreaEl.value) || 0;
+    const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
+    const annualUse = parseFloat(annualUseEl.value) || 0;
+    const annualCarbon = parseFloat(annualCarbonEl.value) || 0;
 
-        if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
-            return; // 節點未準備好，安全退出
-        }
+    // 1. Area & Capacity Layout
+    const netArea = roofArea * spaceRatio;
+    const capacity = netArea / 5; // 5 m² required per 1 kWp
 
-        // 2. 讀取並轉換數值
+    // 2. Generation (1,050 hours baseline)
+    const annualGen = capacity * 1050;
+    
+    // 3. Impact Assessment
+    let ssr = 0;
+    if (annualUse > 0) {
+        ssr = (annualGen / annualUse) * 100;
+    }
+    const carbonSavedKg = (ssr / 100) * annualCarbon;
+    const carbonSavedTons = carbonSavedKg / 1000;
+    
+    // 4. Render to UI
+    document.getElementById('netArea').innerText = Math.round(netArea).toLocaleString() + ' m²';
+    document.getElementById('capacity').innerText = Math.round(capacity).toLocaleString() + ' kWp';
+    document.getElementById('annualGen').innerText = Math.round(annualGen).toLocaleString() + ' kWh/year';
+    
+    // Caps bar display at 100%
+    const displaySsr = ssr > 100 ? 100: ssr;
+    document.getElementById('ssrVal').innerText = ssr.toFixed(1) + '%';
+    document.getElementById('ssrBar').style.width = displaySsr + '%';
+    document.getElementById('carbonReduce').innerText = carbonSavedTons.toFixed(1) + ' Tons';
+    document.getElementById('carbonPercent').innerText = '(Offsets ' + ssr.toFixed(1) + '%)';
+    
+    // 5. Dynamic Joint Circular Benchmarking Logic (25% Target)
+    const govStatusEl = document.getElementById('govStatus');
+    const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
+    
+    if (ssr >= 25.0) {
+        govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (25%)</span>' + circularRef;
+    } else {
+        govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (25%)</span>' + circularRef;
+    }
+}
+
+// Slider Interactivity Trigger
+function updateSlider(val) {
+    const ratioValEl = document.getElementById('ratioVal');
+    if (ratioValEl) ratioValEl.innerText = val;
+    updateCalculation();
+}
+
+// === Sandbox Safe Double Trigger Execution ===
+window.addEventListener('DOMContentLoaded', function() {
+    updateCalculation();
+});
+
+// Force recalculate after 500ms to guarantee rendering inside ArcGIS iFrame sandbox
+setTimeout(function() {
+    updateCalculation();
+}, 500);
+
+// Immediate fallback trigger
+updateCalculation();
+</script>
