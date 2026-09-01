@@ -16,13 +16,16 @@
             --border-color: #e0e0e0;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-light);
             color: var(--text-main);
             margin: 0;
             padding: 12px;
-            box-sizing: border-box;
         }
 
         .container {
@@ -54,11 +57,12 @@
             letter-spacing: 0.5px;
         }
 
+        /* 統一的輸入區域 Grid */
         .input-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            align-items: start;
+            margin-bottom: 0;
         }
 
         .input-group {
@@ -72,26 +76,70 @@
             color: var(--text-muted);
             margin-bottom: 5px;
             font-weight: 500;
+            min-height: 2.4em;
+            line-height: 1.2em;
         }
 
-        input[type="number"] {
-            width: 100%;
+        /* 數字輸入框與按鈕的容器 */
+        .number-input-wrapper {
+            display: flex;
+            align-items: stretch;
+            gap: 4px;
+        }
+
+        input[type="text"].number-input {
+            flex: 1;
             padding: 8px 10px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            box-sizing: border-box;
             font-size: 0.95rem;
+            min-width: 0;
         }
 
-        input[type="number"]:focus {
+        input[type="text"].number-input:focus {
             outline: none;
             border-color: var(--hk-green);
         }
 
+        /* 加減按鈕 */
+        .stepper-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stepper-btn {
+            background: var(--hk-green);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 18px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .stepper-btn:hover {
+            background: var(--hk-green-hover);
+        }
+
+        .stepper-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 滑桿容器 */
         .slider-container {
             display: flex;
             align-items: center;
             gap: 10px;
+            padding-top: 8px;
         }
 
         input[type="range"] {
@@ -207,6 +255,17 @@
             text-align: justify;
             line-height: 1.4;
         }
+
+        /* 響應式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -217,26 +276,48 @@
     <!-- Input Parameters -->
     <div class="section-title">⚙️ Input Parameters</div>
     <div class="input-grid">
+        <!-- Total Roof Area -->
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
-            <input type="number" id="roofArea" value="4119" min="0" step="1" oninput="updateCalculation()">
+            <div class="number-input-wrapper">
+                <input type="text" class="number-input" id="roofArea" value="4,119" readonly>
+                <div class="stepper-buttons">
+                    <button class="stepper-btn" onclick="stepValue('roofArea', 100)" title="Increase by 100">▲</button>
+                    <button class="stepper-btn" onclick="stepValue('roofArea', -100)" title="Decrease by 100">▼</button>
+                </div>
+            </div>
         </div>
+
+        <!-- Roof Utilization Rate -->
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
             <div class="slider-container">
                 <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
             </div>
         </div>
-    </div>
 
-    <div class="input-grid" style="margin-top: 12px;">
+        <!-- Annual Consumption -->
         <div class="input-group">
             <label for="annualUse">Annual Consumption (kWh)</label>
-            <input type="number" id="annualUse" value="2177310" min="0" step="1" oninput="updateCalculation()">
+            <div class="number-input-wrapper">
+                <input type="text" class="number-input" id="annualUse" value="2,177,310" readonly>
+                <div class="stepper-buttons">
+                    <button class="stepper-btn" onclick="stepValue('annualUse', 10000)" title="Increase by 10,000">▲</button>
+                    <button class="stepper-btn" onclick="stepValue('annualUse', -10000)" title="Decrease by 10,000">▼</button>
+                </div>
+            </div>
         </div>
+
+        <!-- Baseline Carbon OpEx -->
         <div class="input-group">
             <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-            <input type="number" id="annualCarbon" value="609599" min="0" step="1" oninput="updateCalculation()">
+            <div class="number-input-wrapper">
+                <input type="text" class="number-input" id="annualCarbon" value="609,599" readonly>
+                <div class="stepper-buttons">
+                    <button class="stepper-btn" onclick="stepValue('annualCarbon', 1000)" title="Increase by 1,000">▲</button>
+                    <button class="stepper-btn" onclick="stepValue('annualCarbon', -1000)" title="Decrease by 1,000">▼</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -303,26 +384,93 @@
         RECALC_DELAY_MS: 500
     };
 
+    // ========== Data Store (實際數值) ==========
+    const dataStore = {
+        roofArea: 4119,
+        annualUse: 2177310,
+        annualCarbon: 609599
+    };
+
     // ========== Number Formatting ==========
     function formatNumber(num) {
         return Math.round(num).toLocaleString('en-US');
     }
 
-    // ========== Main Calculation ==========
-    function updateCalculation() {
-        const roofAreaEl = document.getElementById('roofArea');
-        const spaceRatioEl = document.getElementById('spaceRatio');
-        const annualUseEl = document.getElementById('annualUse');
-        const annualCarbonEl = document.getElementById('annualCarbon');
+    function parseFormattedNumber(str) {
+        return parseFloat(String(str).replace(/,/g, '')) || 0;
+    }
 
-        if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
-            return;
+    // ========== Stepper Function ==========
+    function stepValue(fieldId, step) {
+        // 更新數據存儲
+        dataStore[fieldId] = Math.max(0, dataStore[fieldId] + step);
+
+        // 更新顯示
+        const element = document.getElementById(fieldId);
+        if (element) {
+            element.value = formatNumber(dataStore[fieldId]);
         }
 
-        const roofArea = Math.max(0, parseFloat(roofAreaEl.value) || 0);
-        const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
-        const annualUse = Math.max(0, parseFloat(annualUseEl.value) || 0);
-        const annualCarbon = Math.max(0, parseFloat(annualCarbonEl.value) || 0);
+        // 重新計算
+        updateCalculation();
+    }
+
+    // ========== 允許手動編輯 ==========
+    function enableManualEdit() {
+        ['roofArea', 'annualUse', 'annualCarbon'].forEach(id => {
+            const element = document.getElementById(id);
+            if (!element) return;
+
+            // 移除 readonly，允許編輯
+            element.removeAttribute('readonly');
+
+            // 點擊時選中全部
+            element.addEventListener('focus', function() {
+                this.select();
+            });
+
+            // 輸入時即時格式化
+            element.addEventListener('input', function(e) {
+                let value = e.target.value;
+                let cleaned = value.replace(/[^\d]/g, '');
+
+                if (cleaned) {
+                    const cursorPos = e.target.selectionStart;
+                    const formatted = formatNumber(cleaned);
+                    e.target.value = formatted;
+
+                    // 簡單的游標調整
+                    const newPos = Math.min(cursorPos, formatted.length);
+                    e.target.setSelectionRange(newPos, newPos);
+                }
+            });
+
+            // 失焦時更新數據並格式化
+            element.addEventListener('blur', function(e) {
+                const value = parseFormattedNumber(e.target.value);
+                dataStore[id] = Math.max(0, value);
+                e.target.value = formatNumber(dataStore[id]);
+                updateCalculation();
+            });
+
+            // Enter 鍵時失焦
+            element.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.target.blur();
+                }
+            });
+        });
+    }
+
+    // ========== Main Calculation ==========
+    function updateCalculation() {
+        const spaceRatioEl = document.getElementById('spaceRatio');
+        if (!spaceRatioEl) return;
+
+        const roofArea = dataStore.roofArea;
+        const spaceRatio = parseFloat(spaceRatioEl.value) / 100;
+        const annualUse = dataStore.annualUse;
+        const annualCarbon = dataStore.annualCarbon;
 
         // Calculate
         const netArea = roofArea * spaceRatio;
@@ -337,7 +485,7 @@
         const carbonSavedKg = (ssr / 100) * annualCarbon;
         const carbonSavedTons = carbonSavedKg / 1000;
 
-        // Update UI with formatted numbers
+        // Update UI
         safeUpdate('netArea', formatNumber(netArea) + ' m²');
         safeUpdate('capacity', formatNumber(capacity) + ' kWp');
         safeUpdate('annualGen', formatNumber(annualGen) + ' kWh/year');
@@ -353,7 +501,7 @@
         safeUpdate('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
         safeUpdate('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
 
-        // Update compliance status
+        // Update compliance
         updateCompliance(ssr);
     }
 
@@ -389,6 +537,7 @@
 
     // ========== Initialization ==========
     window.addEventListener('DOMContentLoaded', function() {
+        enableManualEdit(); // 啟用手動編輯
         updateCalculation();
     });
 
