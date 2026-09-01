@@ -69,23 +69,27 @@
         }
 
         input[type="number"] {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 0.95rem;
-        }
+		input[type="number"],
+		input[type="text"].number-input {
+			width: 100%;
+			padding: 8px 10px;
+			border: 1px solid var(--border-color);
+			font-size: 0.95rem;
+		}
 
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--hk-green);
-        }
+		input[type="number"]:focus {
+		input[type="number"]:focus,
+		input[type="text"].number-input:focus {
+			outline: none;
+			border-color: var(--hk-green);
+		}
 
-        input[type="number"].error {
-            border-color: #d32f2f;
-            background-color: #ffebee;
-        }
+		input[type="number"].error {
+		input[type="number"].error,
+		input[type="text"].number-input.error {
+			border-color: #d32f2f;
+			background-color: #ffebee;
+		}
 
         .slider-container {
             display: flex;
@@ -314,7 +318,77 @@
         MAX_SSR_DISPLAY: 100,         // Maximum SSR percentage for progress bar display
         RECALC_DELAY_MS: 500          // Delay for iframe sandbox compatibility
     };
+	// ========== Number Formatting Utilities ==========
+	function formatNumberWithCommas(num) {
+		// Convert number to string with thousand separators
+		return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	}
 
+	function removeCommas(str) {
+		// Remove all commas from string
+		return str.replace(/,/g, "");
+	}
+
+	function parseFormattedNumber(str) {
+		// Parse number from formatted string
+		const cleaned = removeCommas(str);
+		const num = parseFloat(cleaned);
+		return isNaN(num) ? 0 : num;
+	}
+
+	// ========== Input Field Handlers ==========
+	function handleNumberInput(element) {
+		// Called on every keystroke
+		let value = element.value;
+
+		// Remove all non-digit characters except decimal point
+		let cleanValue = value.replace(/[^\d.]/g, "");
+
+		// Prevent multiple decimal points
+		const parts = cleanValue.split(".");
+		if (parts.length > 2) {
+			cleanValue = parts[0] + "." + parts.slice(1).join("");
+		}
+
+		// Store cursor position
+		const cursorPos = element.selectionStart;
+		const oldLength = value.length;
+
+		// Format with commas
+		if (cleanValue) {
+			const numValue = parseFloat(cleanValue);
+			if (!isNaN(numValue)) {
+				// Format integer part with commas
+				const [intPart, decPart] = cleanValue.split(".");
+				let formatted = formatNumberWithCommas(intPart);
+				if (cleanValue.includes(".")) {
+					formatted += "." + (decPart || "");
+				}
+				element.value = formatted;
+
+				// Adjust cursor position based on added commas
+				const newLength = formatted.length;
+				const diff = newLength - oldLength;
+				element.setSelectionRange(cursorPos + diff, cursorPos + diff);
+			}
+		} else {
+			element.value = cleanValue;
+		}
+
+		// Trigger calculation update
+		updateCalculation();
+	}
+
+	function formatNumberInput(element) {
+		// Called when input loses focus - ensures proper formatting
+		const value = parseFormattedNumber(element.value);
+		if (value > 0) {
+			element.value = formatNumberWithCommas(Math.round(value));
+		} else {
+			element.value = "0";
+		}
+		updateCalculation();
+	}
     // ========== Input Validation ==========
     function validateInput(elementId, value) {
         const element = document.getElementById(elementId);
@@ -323,6 +397,8 @@
         if (!element || !errorElement) return value;
 
         const numValue = parseFloat(value);
+		// Parse value (handle formatted numbers with commas)
+		const numValue = typeof value === 'string' ? parseFormattedNumber(value) : parseFloat(value);
         const isValid = !isNaN(numValue) && numValue >= 0;
 
         if (isValid) {
