@@ -58,6 +58,12 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
+            align-items: start;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
         }
 
         label {
@@ -68,7 +74,7 @@
             font-weight: 500;
         }
 
-        input[type="text"].number-input {
+        input[type="number"] {
             width: 100%;
             padding: 8px 10px;
             border: 1px solid var(--border-color);
@@ -77,14 +83,9 @@
             font-size: 0.95rem;
         }
 
-        input[type="text"].number-input:focus {
+        input[type="number"]:focus {
             outline: none;
             border-color: var(--hk-green);
-        }
-
-        input[type="text"].number-input.error {
-            border-color: #d32f2f;
-            background-color: #ffebee;
         }
 
         .slider-container {
@@ -218,7 +219,7 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
-            <input type="text" class="number-input" id="roofArea" value="4,119">
+            <input type="number" id="roofArea" value="4119" min="0" step="1" oninput="updateCalculation()">
         </div>
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
@@ -226,15 +227,16 @@
                 <input type="range" id="spaceRatio" min="30" max="80" value="55" oninput="updateSlider(this.value)">
             </div>
         </div>
-        <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
-            <div class="input-group">
-                <label for="annualUse">Annual Consumption (kWh)</label>
-                <input type="text" class="number-input" id="annualUse" value="2,177,310">
-            </div>
-            <div class="input-group">
-                <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-                <input type="text" class="number-input" id="annualCarbon" value="609,599">
-            </div>
+    </div>
+
+    <div class="input-grid" style="margin-top: 12px;">
+        <div class="input-group">
+            <label for="annualUse">Annual Consumption (kWh)</label>
+            <input type="number" id="annualUse" value="2177310" min="0" step="1" oninput="updateCalculation()">
+        </div>
+        <div class="input-group">
+            <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
+            <input type="number" id="annualCarbon" value="609599" min="0" step="1" oninput="updateCalculation()">
         </div>
     </div>
 
@@ -301,66 +303,9 @@
         RECALC_DELAY_MS: 500
     };
 
-    // ========== Number Formatting Utilities ==========
+    // ========== Number Formatting ==========
     function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-
-    function parseNumber(str) {
-        if (typeof str === 'number') return str;
-        const cleaned = String(str).replace(/,/g, "");
-        const num = parseFloat(cleaned);
-        return isNaN(num) ? 0 : Math.max(0, num);
-    }
-
-    // ========== Input Handlers ==========
-    function setupNumberInput(elementId) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-
-        element.addEventListener('input', function(e) {
-            let value = e.target.value;
-            
-            // Remove all non-numeric characters except decimal point
-            let cleaned = value.replace(/[^\d.]/g, "");
-            
-            // Handle multiple decimal points
-            const parts = cleaned.split(".");
-            if (parts.length > 2) {
-                cleaned = parts[0] + "." + parts.slice(1).join("");
-            }
-
-            // Get cursor position
-            const start = e.target.selectionStart;
-            const oldValue = value;
-            
-            // Format with commas
-            if (cleaned) {
-                const [intPart, decPart] = cleaned.split(".");
-                let formatted = formatNumber(intPart);
-                if (cleaned.includes(".")) {
-                    formatted += "." + (decPart || "");
-                }
-                
-                // Calculate new cursor position
-                const commasBeforeCursor = (oldValue.substring(0, start).match(/,/g) || []).length;
-                const newCommasBeforeCursor = (formatted.substring(0, start).match(/,/g) || []).length;
-                const cursorAdjustment = newCommasBeforeCursor - commasBeforeCursor;
-                
-                e.target.value = formatted;
-                e.target.setSelectionRange(start + cursorAdjustment, start + cursorAdjustment);
-            } else {
-                e.target.value = cleaned;
-            }
-            
-            updateCalculation();
-        });
-
-        element.addEventListener('blur', function(e) {
-            const value = parseNumber(e.target.value);
-            e.target.value = formatNumber(Math.round(value));
-            updateCalculation();
-        });
+        return Math.round(num).toLocaleString('en-US');
     }
 
     // ========== Main Calculation ==========
@@ -374,55 +319,60 @@
             return;
         }
 
-        const roofArea = parseNumber(roofAreaEl.value);
-        const spaceRatio = parseFloat(spaceRatioEl.value) / 100;
-        const annualUse = parseNumber(annualUseEl.value);
-        const annualCarbon = parseNumber(annualCarbonEl.value);
+        const roofArea = Math.max(0, parseFloat(roofAreaEl.value) || 0);
+        const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
+        const annualUse = Math.max(0, parseFloat(annualUseEl.value) || 0);
+        const annualCarbon = Math.max(0, parseFloat(annualCarbonEl.value) || 0);
 
         // Calculate
         const netArea = roofArea * spaceRatio;
         const capacity = netArea / CONFIG.M2_PER_KWP;
         const annualGen = capacity * CONFIG.PEAK_SUN_HOURS;
-        
+
         let ssr = 0;
         if (annualUse > 0) {
             ssr = (annualGen / annualUse) * 100;
         }
-        
+
         const carbonSavedKg = (ssr / 100) * annualCarbon;
         const carbonSavedTons = carbonSavedKg / 1000;
 
-        // Update UI
-        updateElement('netArea', formatNumber(Math.round(netArea)) + ' m²');
-        updateElement('capacity', formatNumber(Math.round(capacity)) + ' kWp');
-        updateElement('annualGen', formatNumber(Math.round(annualGen)) + ' kWh/year');
-        
+        // Update UI with formatted numbers
+        safeUpdate('netArea', formatNumber(netArea) + ' m²');
+        safeUpdate('capacity', formatNumber(capacity) + ' kWp');
+        safeUpdate('annualGen', formatNumber(annualGen) + ' kWh/year');
+
         const displaySsr = ssr > CONFIG.MAX_SSR_DISPLAY ? CONFIG.MAX_SSR_DISPLAY : ssr;
-        updateElement('ssrVal', ssr.toFixed(1) + '%');
-        
+        safeUpdate('ssrVal', ssr.toFixed(1) + '%');
+
         const ssrBar = document.getElementById('ssrBar');
         if (ssrBar) {
             ssrBar.style.width = displaySsr + '%';
         }
-        
-        updateElement('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
-        updateElement('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
+
+        safeUpdate('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
+        safeUpdate('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
 
         // Update compliance status
+        updateCompliance(ssr);
+    }
+
+    function updateCompliance(ssr) {
         const govStatusEl = document.getElementById('govStatus');
-        if (govStatusEl) {
-            const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
-            if (ssr >= CONFIG.TARGET_SSR_PERCENT) {
-                govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (' +
-                    CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
-            } else {
-                govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (' +
-                    CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
-            }
+        if (!govStatusEl) return;
+
+        const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
+
+        if (ssr >= CONFIG.TARGET_SSR_PERCENT) {
+            govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (' +
+                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+        } else {
+            govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (' +
+                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
         }
     }
 
-    function updateElement(id, content) {
+    function safeUpdate(id, content) {
         const element = document.getElementById(id);
         if (element) {
             element.innerHTML = content;
@@ -439,9 +389,6 @@
 
     // ========== Initialization ==========
     window.addEventListener('DOMContentLoaded', function() {
-        setupNumberInput('roofArea');
-        setupNumberInput('annualUse');
-        setupNumberInput('annualCarbon');
         updateCalculation();
     });
 
