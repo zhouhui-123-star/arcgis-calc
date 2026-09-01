@@ -68,7 +68,6 @@
             font-weight: 500;
         }
 
-        input[type="number"] {
 		input[type="number"],
 		input[type="text"].number-input {
 			width: 100%;
@@ -77,14 +76,12 @@
 			font-size: 0.95rem;
 		}
 
-		input[type="number"]:focus {
 		input[type="number"]:focus,
 		input[type="text"].number-input:focus {
 			outline: none;
 			border-color: var(--hk-green);
 		}
 
-		input[type="number"].error {
 		input[type="number"].error,
 		input[type="text"].number-input.error {
 			border-color: #d32f2f;
@@ -233,7 +230,6 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
-            <input type="number" id="roofArea" value="4119" min="0" oninput="updateCalculation()">
 			<input type="text" class="number-input" id="roofArea" value="4,119" min="0"
 				oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
             <div class="error-message" id="roofAreaError">Value must be ≥ 0</div>
@@ -247,14 +243,12 @@
         <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
             <div class="input-group">
                 <label for="annualUse">Annual Consumption (kWh)</label>
-                <input type="number" id="annualUse" value="2177310" min="0" oninput="updateCalculation()">
 				<input type="text" class="number-input" id="annualUse" value="2,177,310" min="0"
 					oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
                 <div class="error-message" id="annualUseError">Value must be ≥ 0</div>
             </div>
             <div class="input-group">
                 <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-                <input type="number" id="annualCarbon" value="609599" min="0" oninput="updateCalculation()">
 				<input type="text" class="number-input" id="annualCarbon" value="609,599" min="0"
 					oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
                 <div class="error-message" id="annualCarbonError">Value must be ≥ 0</div>
@@ -402,7 +396,6 @@
         
         if (!element || !errorElement) return value;
 
-        const numValue = parseFloat(value);
 		// Parse value (handle formatted numbers with commas)
 		const numValue = typeof value === 'string' ? parseFormattedNumber(value) : parseFloat(value);
         const isValid = !isNaN(numValue) && numValue >= 0;
