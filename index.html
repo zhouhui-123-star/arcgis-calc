@@ -57,12 +57,12 @@
             letter-spacing: 0.5px;
         }
 
-        /* 統一的輸入區域 Grid */
+        /* 2x2 Grid 布局 */
         .input-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 0;
+            align-items: start;
         }
 
         .input-group {
@@ -76,8 +76,7 @@
             color: var(--text-muted);
             margin-bottom: 5px;
             font-weight: 500;
-            min-height: 2.4em;
-            line-height: 1.2em;
+            line-height: 1.2;
         }
 
         /* 數字輸入框與按鈕的容器 */
@@ -85,6 +84,7 @@
             display: flex;
             align-items: stretch;
             gap: 4px;
+            height: 36px;
         }
 
         input[type="text"].number-input {
@@ -113,10 +113,10 @@
             color: white;
             border: none;
             width: 24px;
-            height: 18px;
+            height: 17px;
             border-radius: 3px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1;
             padding: 0;
             display: flex;
@@ -139,7 +139,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding-top: 8px;
+            height: 36px;
         }
 
         input[type="range"] {
@@ -276,11 +276,11 @@
     <!-- Input Parameters -->
     <div class="section-title">⚙️ Input Parameters</div>
     <div class="input-grid">
-        <!-- Total Roof Area -->
+        <!-- 第一行左：Total Roof Area -->
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
             <div class="number-input-wrapper">
-                <input type="text" class="number-input" id="roofArea" value="4,119" readonly>
+                <input type="text" class="number-input" id="roofArea" value="4,119">
                 <div class="stepper-buttons">
                     <button class="stepper-btn" onclick="stepValue('roofArea', 100)" title="Increase by 100">▲</button>
                     <button class="stepper-btn" onclick="stepValue('roofArea', -100)" title="Decrease by 100">▼</button>
@@ -288,7 +288,7 @@
             </div>
         </div>
 
-        <!-- Roof Utilization Rate -->
+        <!-- 第一行右：Roof Utilization Rate -->
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
             <div class="slider-container">
@@ -296,11 +296,11 @@
             </div>
         </div>
 
-        <!-- Annual Consumption -->
+        <!-- 第二行左：Annual Consumption -->
         <div class="input-group">
             <label for="annualUse">Annual Consumption (kWh)</label>
             <div class="number-input-wrapper">
-                <input type="text" class="number-input" id="annualUse" value="2,177,310" readonly>
+                <input type="text" class="number-input" id="annualUse" value="2,177,310">
                 <div class="stepper-buttons">
                     <button class="stepper-btn" onclick="stepValue('annualUse', 10000)" title="Increase by 10,000">▲</button>
                     <button class="stepper-btn" onclick="stepValue('annualUse', -10000)" title="Decrease by 10,000">▼</button>
@@ -308,11 +308,11 @@
             </div>
         </div>
 
-        <!-- Baseline Carbon OpEx -->
+        <!-- 第二行右：Baseline Carbon OpEx -->
         <div class="input-group">
             <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
             <div class="number-input-wrapper">
-                <input type="text" class="number-input" id="annualCarbon" value="609,599" readonly>
+                <input type="text" class="number-input" id="annualCarbon" value="609,599">
                 <div class="stepper-buttons">
                     <button class="stepper-btn" onclick="stepValue('annualCarbon', 1000)" title="Increase by 1,000">▲</button>
                     <button class="stepper-btn" onclick="stepValue('annualCarbon', -1000)" title="Decrease by 1,000">▼</button>
@@ -384,7 +384,7 @@
         RECALC_DELAY_MS: 500
     };
 
-    // ========== Data Store (實際數值) ==========
+    // ========== Data Store ==========
     const dataStore = {
         roofArea: 4119,
         annualUse: 2177310,
@@ -402,50 +402,43 @@
 
     // ========== Stepper Function ==========
     function stepValue(fieldId, step) {
-        // 更新數據存儲
         dataStore[fieldId] = Math.max(0, dataStore[fieldId] + step);
-
-        // 更新顯示
         const element = document.getElementById(fieldId);
         if (element) {
             element.value = formatNumber(dataStore[fieldId]);
         }
-
-        // 重新計算
         updateCalculation();
     }
 
-    // ========== 允許手動編輯 ==========
+    // ========== Enable Manual Edit ==========
     function enableManualEdit() {
         ['roofArea', 'annualUse', 'annualCarbon'].forEach(id => {
             const element = document.getElementById(id);
             if (!element) return;
 
-            // 移除 readonly，允許編輯
-            element.removeAttribute('readonly');
-
-            // 點擊時選中全部
             element.addEventListener('focus', function() {
                 this.select();
             });
 
-            // 輸入時即時格式化
             element.addEventListener('input', function(e) {
                 let value = e.target.value;
                 let cleaned = value.replace(/[^\d]/g, '');
 
                 if (cleaned) {
                     const cursorPos = e.target.selectionStart;
+                    const oldLength = value.length;
                     const formatted = formatNumber(cleaned);
+                    const newLength = formatted.length;
+
                     e.target.value = formatted;
 
-                    // 簡單的游標調整
-                    const newPos = Math.min(cursorPos, formatted.length);
+                    // Adjust cursor position
+                    const diff = newLength - oldLength;
+                    const newPos = Math.min(Math.max(0, cursorPos + diff), formatted.length);
                     e.target.setSelectionRange(newPos, newPos);
                 }
             });
 
-            // 失焦時更新數據並格式化
             element.addEventListener('blur', function(e) {
                 const value = parseFormattedNumber(e.target.value);
                 dataStore[id] = Math.max(0, value);
@@ -453,7 +446,6 @@
                 updateCalculation();
             });
 
-            // Enter 鍵時失焦
             element.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.target.blur();
@@ -472,7 +464,6 @@
         const annualUse = dataStore.annualUse;
         const annualCarbon = dataStore.annualCarbon;
 
-        // Calculate
         const netArea = roofArea * spaceRatio;
         const capacity = netArea / CONFIG.M2_PER_KWP;
         const annualGen = capacity * CONFIG.PEAK_SUN_HOURS;
@@ -485,7 +476,6 @@
         const carbonSavedKg = (ssr / 100) * annualCarbon;
         const carbonSavedTons = carbonSavedKg / 1000;
 
-        // Update UI
         safeUpdate('netArea', formatNumber(netArea) + ' m²');
         safeUpdate('capacity', formatNumber(capacity) + ' kWp');
         safeUpdate('annualGen', formatNumber(annualGen) + ' kWh/year');
@@ -501,7 +491,6 @@
         safeUpdate('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
         safeUpdate('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
 
-        // Update compliance
         updateCompliance(ssr);
     }
 
@@ -537,7 +526,7 @@
 
     // ========== Initialization ==========
     window.addEventListener('DOMContentLoaded', function() {
-        enableManualEdit(); // 啟用手動編輯
+        enableManualEdit();
         updateCalculation();
     });
 
