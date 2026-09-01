@@ -68,25 +68,24 @@
             font-weight: 500;
         }
 
-		input[type="number"],
-		input[type="text"].number-input {
-			width: 100%;
-			padding: 8px 10px;
-			border: 1px solid var(--border-color);
-			font-size: 0.95rem;
-		}
+        input[type="text"].number-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
 
-		input[type="number"]:focus,
-		input[type="text"].number-input:focus {
-			outline: none;
-			border-color: var(--hk-green);
-		}
+        input[type="text"].number-input:focus {
+            outline: none;
+            border-color: var(--hk-green);
+        }
 
-		input[type="number"].error,
-		input[type="text"].number-input.error {
-			border-color: #d32f2f;
-			background-color: #ffebee;
-		}
+        input[type="text"].number-input.error {
+            border-color: #d32f2f;
+            background-color: #ffebee;
+        }
 
         .slider-container {
             display: flex;
@@ -190,7 +189,7 @@
         }
         .status-pass { color: #2e7d32; }
         .status-warn { color: #b71c1c; }
-        
+
         .ref-tag {
             font-size: 0.6rem;
             color: #777777;
@@ -207,32 +206,19 @@
             text-align: justify;
             line-height: 1.4;
         }
-
-        .error-message {
-            font-size: 0.7rem;
-            color: #d32f2f;
-            margin-top: 3px;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">San Tin / Lok Ma Chau Development Node, HK</span></h2>
-    
+
     <!-- Input Parameters -->
     <div class="section-title">⚙️ Input Parameters</div>
     <div class="input-grid">
         <div class="input-group">
             <label for="roofArea">Total Roof Area (m²)</label>
-			<input type="text" class="number-input" id="roofArea" value="4,119" min="0"
-				oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
-            <div class="error-message" id="roofAreaError">Value must be ≥ 0</div>
+            <input type="text" class="number-input" id="roofArea" value="4,119">
         </div>
         <div class="input-group">
             <label>Roof Utilization Rate (<span id="ratioVal">55</span>%)</label>
@@ -243,15 +229,11 @@
         <div class="input-grid" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
             <div class="input-group">
                 <label for="annualUse">Annual Consumption (kWh)</label>
-				<input type="text" class="number-input" id="annualUse" value="2,177,310" min="0"
-					oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
-                <div class="error-message" id="annualUseError">Value must be ≥ 0</div>
+                <input type="text" class="number-input" id="annualUse" value="2,177,310">
             </div>
             <div class="input-group">
                 <label for="annualCarbon">Baseline Carbon OpEx (kg CO₂e)</label>
-				<input type="text" class="number-input" id="annualCarbon" value="609,599" min="0"
-					oninput="handleNumberInput(this)" onblur="formatNumberInput(this)">
-                <div class="error-message" id="annualCarbonError">Value must be ≥ 0</div>
+                <input type="text" class="number-input" id="annualCarbon" value="609,599">
             </div>
         </div>
     </div>
@@ -289,7 +271,7 @@
                 <div class="hl-title">⚡ Solar Self-Sufficiency</div>
                 <div class="hl-value" id="ssrVal">0%</div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" id="ssrBar"></div></div>
-                
+
                 <!-- Dynamic Project Standard Comparison (25% Target) -->
                 <div class="gov-benchmark" id="govStatus"></div>
             </div>
@@ -312,132 +294,96 @@
 <script>
     // ========== Configuration Constants ==========
     const CONFIG = {
-        PEAK_SUN_HOURS: 1050,        // Annual peak sun hours in New Territories, HK
-        M2_PER_KWP: 5,                // Square meters required per 1 kWp capacity
-        TARGET_SSR_PERCENT: 25.0,     // Government compliance target (Joint Circular)
-        MAX_SSR_DISPLAY: 100,         // Maximum SSR percentage for progress bar display
-        RECALC_DELAY_MS: 500          // Delay for iframe sandbox compatibility
+        PEAK_SUN_HOURS: 1050,
+        M2_PER_KWP: 5,
+        TARGET_SSR_PERCENT: 25.0,
+        MAX_SSR_DISPLAY: 100,
+        RECALC_DELAY_MS: 500
     };
-	// ========== Number Formatting Utilities ==========
-	function formatNumberWithCommas(num) {
-		// Convert number to string with thousand separators
-		return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-	}
 
-	function removeCommas(str) {
-		// Remove all commas from string
-		return str.replace(/,/g, "");
-	}
-
-	function parseFormattedNumber(str) {
-		// Parse number from formatted string
-		const cleaned = removeCommas(str);
-		const num = parseFloat(cleaned);
-		return isNaN(num) ? 0 : num;
-	}
-
-	// ========== Input Field Handlers ==========
-	function handleNumberInput(element) {
-		// Called on every keystroke
-		let value = element.value;
-
-		// Remove all non-digit characters except decimal point
-		let cleanValue = value.replace(/[^\d.]/g, "");
-
-		// Prevent multiple decimal points
-		const parts = cleanValue.split(".");
-		if (parts.length > 2) {
-			cleanValue = parts[0] + "." + parts.slice(1).join("");
-		}
-
-		// Store cursor position
-		const cursorPos = element.selectionStart;
-		const oldLength = value.length;
-
-		// Format with commas
-		if (cleanValue) {
-			const numValue = parseFloat(cleanValue);
-			if (!isNaN(numValue)) {
-				// Format integer part with commas
-				const [intPart, decPart] = cleanValue.split(".");
-				let formatted = formatNumberWithCommas(intPart);
-				if (cleanValue.includes(".")) {
-					formatted += "." + (decPart || "");
-				}
-				element.value = formatted;
-
-				// Adjust cursor position based on added commas
-				const newLength = formatted.length;
-				const diff = newLength - oldLength;
-				element.setSelectionRange(cursorPos + diff, cursorPos + diff);
-			}
-		} else {
-			element.value = cleanValue;
-		}
-
-		// Trigger calculation update
-		updateCalculation();
-	}
-
-	function formatNumberInput(element) {
-		// Called when input loses focus - ensures proper formatting
-		const value = parseFormattedNumber(element.value);
-		if (value > 0) {
-			element.value = formatNumberWithCommas(Math.round(value));
-		} else {
-			element.value = "0";
-		}
-		updateCalculation();
-	}
-    // ========== Input Validation ==========
-    function validateInput(elementId, value) {
-        const element = document.getElementById(elementId);
-        const errorElement = document.getElementById(elementId + 'Error');
-        
-        if (!element || !errorElement) return value;
-
-		// Parse value (handle formatted numbers with commas)
-		const numValue = typeof value === 'string' ? parseFormattedNumber(value) : parseFloat(value);
-        const isValid = !isNaN(numValue) && numValue >= 0;
-
-        if (isValid) {
-            element.classList.remove('error');
-            errorElement.classList.remove('show');
-            return Math.max(0, numValue);
-        } else {
-            element.classList.add('error');
-            errorElement.classList.add('show');
-            return 0;
-        }
+    // ========== Number Formatting Utilities ==========
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // ========== Main Calculation Logic ==========
+    function parseNumber(str) {
+        if (typeof str === 'number') return str;
+        const cleaned = String(str).replace(/,/g, "");
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : Math.max(0, num);
+    }
+
+    // ========== Input Handlers ==========
+    function setupNumberInput(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        element.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            // Remove all non-numeric characters except decimal point
+            let cleaned = value.replace(/[^\d.]/g, "");
+            
+            // Handle multiple decimal points
+            const parts = cleaned.split(".");
+            if (parts.length > 2) {
+                cleaned = parts[0] + "." + parts.slice(1).join("");
+            }
+
+            // Get cursor position
+            const start = e.target.selectionStart;
+            const oldValue = value;
+            
+            // Format with commas
+            if (cleaned) {
+                const [intPart, decPart] = cleaned.split(".");
+                let formatted = formatNumber(intPart);
+                if (cleaned.includes(".")) {
+                    formatted += "." + (decPart || "");
+                }
+                
+                // Calculate new cursor position
+                const commasBeforeCursor = (oldValue.substring(0, start).match(/,/g) || []).length;
+                const newCommasBeforeCursor = (formatted.substring(0, start).match(/,/g) || []).length;
+                const cursorAdjustment = newCommasBeforeCursor - commasBeforeCursor;
+                
+                e.target.value = formatted;
+                e.target.setSelectionRange(start + cursorAdjustment, start + cursorAdjustment);
+            } else {
+                e.target.value = cleaned;
+            }
+            
+            updateCalculation();
+        });
+
+        element.addEventListener('blur', function(e) {
+            const value = parseNumber(e.target.value);
+            e.target.value = formatNumber(Math.round(value));
+            updateCalculation();
+        });
+    }
+
+    // ========== Main Calculation ==========
     function updateCalculation() {
-        // Fetch and validate input elements
         const roofAreaEl = document.getElementById('roofArea');
         const spaceRatioEl = document.getElementById('spaceRatio');
         const annualUseEl = document.getElementById('annualUse');
         const annualCarbonEl = document.getElementById('annualCarbon');
 
-        // Exit gracefully if DOM elements are not rendered yet
         if (!roofAreaEl || !spaceRatioEl || !annualUseEl || !annualCarbonEl) {
             return;
         }
 
-        // Parse and validate inputs
-        const roofArea = validateInput('roofArea', roofAreaEl.value);
-        const spaceRatio = (parseFloat(spaceRatioEl.value) || 55) / 100;
-        const annualUse = validateInput('annualUse', annualUseEl.value);
-        const annualCarbon = validateInput('annualCarbon', annualCarbonEl.value);
+        const roofArea = parseNumber(roofAreaEl.value);
+        const spaceRatio = parseFloat(spaceRatioEl.value) / 100;
+        const annualUse = parseNumber(annualUseEl.value);
+        const annualCarbon = parseNumber(annualCarbonEl.value);
 
-        // ========== 1. PV Area & Capacity Layout ==========
+        // Calculate
         const netArea = roofArea * spaceRatio;
         const capacity = netArea / CONFIG.M2_PER_KWP;
-
-        // ========== 2. Annual Generation Estimation ==========
         const annualGen = capacity * CONFIG.PEAK_SUN_HOURS;
         
-        // ========== 3. Impact Assessment ==========
         let ssr = 0;
         if (annualUse > 0) {
             ssr = (annualGen / annualUse) * 100;
@@ -445,58 +391,44 @@
         
         const carbonSavedKg = (ssr / 100) * annualCarbon;
         const carbonSavedTons = carbonSavedKg / 1000;
-        
-        // ========== 4. Update UI Output ==========
-        updateOutputDisplay(netArea, capacity, annualGen, ssr, carbonSavedTons);
-        
-        // ========== 5. Update Compliance Status ==========
-        updateComplianceStatus(ssr);
-    }
 
-    // ========== UI Update Functions ==========
-    function updateOutputDisplay(netArea, capacity, annualGen, ssr, carbonSavedTons) {
-        // Update capacity and generation displays
-        safeUpdateElement('netArea', Math.round(netArea).toLocaleString() + ' m²');
-        safeUpdateElement('capacity', Math.round(capacity).toLocaleString() + ' kWp');
-        safeUpdateElement('annualGen', Math.round(annualGen).toLocaleString() + ' kWh/year');
+        // Update UI
+        updateElement('netArea', formatNumber(Math.round(netArea)) + ' m²');
+        updateElement('capacity', formatNumber(Math.round(capacity)) + ' kWp');
+        updateElement('annualGen', formatNumber(Math.round(annualGen)) + ' kWh/year');
         
-        // Update self-sufficiency ratio (cap display at 100%)
         const displaySsr = ssr > CONFIG.MAX_SSR_DISPLAY ? CONFIG.MAX_SSR_DISPLAY : ssr;
-        safeUpdateElement('ssrVal', ssr.toFixed(1) + '%');
+        updateElement('ssrVal', ssr.toFixed(1) + '%');
         
         const ssrBar = document.getElementById('ssrBar');
         if (ssrBar) {
             ssrBar.style.width = displaySsr + '%';
         }
         
-        // Update carbon reduction metrics
-        safeUpdateElement('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
-        safeUpdateElement('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
-    }
+        updateElement('carbonReduce', carbonSavedTons.toFixed(1) + ' Tons');
+        updateElement('carbonPercent', '(Offsets ' + ssr.toFixed(1) + '%)');
 
-    function updateComplianceStatus(ssr) {
+        // Update compliance status
         const govStatusEl = document.getElementById('govStatus');
-        if (!govStatusEl) return;
-
-        const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
-        
-        if (ssr >= CONFIG.TARGET_SSR_PERCENT) {
-            govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (' + 
-                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
-        } else {
-            govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (' + 
-                CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+        if (govStatusEl) {
+            const circularRef = '<div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>';
+            if (ssr >= CONFIG.TARGET_SSR_PERCENT) {
+                govStatusEl.innerHTML = '<span class="status-pass">🟢 Meets Target (' +
+                    CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+            } else {
+                govStatusEl.innerHTML = '<span class="status-warn">🟡 Below Target (' +
+                    CONFIG.TARGET_SSR_PERCENT + '%)</span>' + circularRef;
+            }
         }
     }
 
-    function safeUpdateElement(id, content) {
+    function updateElement(id, content) {
         const element = document.getElementById(id);
         if (element) {
             element.innerHTML = content;
         }
     }
 
-    // ========== Slider Interactivity ==========
     function updateSlider(val) {
         const ratioValEl = document.getElementById('ratioVal');
         if (ratioValEl) {
@@ -505,19 +437,18 @@
         updateCalculation();
     }
 
-    // ========== Initialization (Multi-trigger for iframe compatibility) ==========
-    
-    // Trigger 1: Standard DOM ready event
+    // ========== Initialization ==========
     window.addEventListener('DOMContentLoaded', function() {
+        setupNumberInput('roofArea');
+        setupNumberInput('annualUse');
+        setupNumberInput('annualCarbon');
         updateCalculation();
     });
 
-    // Trigger 2: Delayed execution for ArcGIS iframe sandbox compatibility
     setTimeout(function() {
         updateCalculation();
     }, CONFIG.RECALC_DELAY_MS);
 
-    // Trigger 3: Immediate fallback
     updateCalculation();
 </script>
 
