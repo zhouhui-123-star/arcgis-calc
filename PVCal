@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Territories PV Capacity & Benefit Estimator</title>
+    <style>
+        :root {
+            --hk-green: #2e7d32;
+            --hk-green-hover: #1b5e20;
+            --arcgis-blue: #0079c1;
+            --bg-light: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #222222;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            margin: 0;
+            padding: 12px;
+        }
+
+        .container {
+            max-width: 550px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            border-top: 6px solid var(--hk-green);
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--hk-green);
+            font-size: 1.25rem;
+            text-align: center;
+            border-bottom: 2px solid #e8f5e9;
+            padding-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--arcgis-blue);
+            margin: 18px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 靜態參數展示網格 (2x2) */
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .param-card {
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .param-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .param-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .param-subtext {
+            font-size: 0.7rem;
+            color: #757575;
+            margin-top: 3px;
+            line-height: 1.2;
+        }
+
+        /* Result Cards */
+        .result-card {
+            background: #f9fbf9;
+            border: 1px solid #e8f5e9;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .result-num {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1b5e20;
+        }
+
+        /* Core Metrics Highlight */
+        .highlight-box {
+            background: #edf7ed;
+            border-left: 4px solid var(--hk-green);
+            padding: 15px 12px;
+            border-radius: 0 6px 6px 0;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .hl-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .hl-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--hk-green);
+            margin: 6px 0;
+        }
+
+        /* Progress Bar */
+        .progress-bar-bg {
+            background: #dbeded;
+            border-radius: 10px;
+            height: 6px;
+            width: 85%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            background: var(--hk-green);
+            height: 100%;
+            width: 25.0%; /* 固定 25.0% */
+        }
+
+        /* Project Benchmarking Alert & Ref Card */
+        .gov-benchmark {
+            font-size: 0.7rem;
+            margin-top: 8px;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        .status-pass { color: #2e7d32; }
+
+        .ref-tag {
+            font-size: 0.6rem;
+            color: #777777;
+            font-weight: normal;
+            font-style: italic;
+            max-width: 200px;
+            line-height: 1.2;
+        }
+
+        .note {
+            font-size: 0.7rem;
+            color: #888888;
+            margin-top: 15px;
+            text-align: justify;
+            line-height: 1.4;
+        }
+
+        /* 響應式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .param-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">San Tin / Lok Ma Chau Development Node, HK</span></h2>
+
+    <!-- 固定參數展示 -->
+    <div class="section-title">⚙️ Fixed Baseline Parameters</div>
+    <div class="param-grid">
+        <!-- 參數 1: Total Roof Area -->
+        <div class="param-card">
+            <span class="param-label">Total Roof Area</span>
+            <span class="param-value">4,119.6 m²</span>
+            <span class="param-subtext">Block A: 3,375.6 m² | Block B: 744.0 m²</span>
+        </div>
+
+        <!-- 參數 2: Roof Utilization Rate -->
+        <div class="param-card">
+            <span class="param-label">Roof Utilization Rate</span>
+            <span class="param-value">63%</span>
+            <span class="param-subtext">Designated panel footprint ratio</span>
+        </div>
+
+        <!-- 參數 3: Annual Consumption -->
+        <div class="param-card">
+            <span class="param-label">Annual Consumption</span>
+            <span class="param-value">2,177,310 kWh</span>
+            <span class="param-subtext">Baseline electricity demand</span>
+        </div>
+
+        <!-- 參數 4: Baseline Carbon OpEx -->
+        <div class="param-card">
+            <span class="param-label">Baseline Carbon OpEx</span>
+            <span class="param-value">609,599 kg CO₂e</span>
+            <span class="param-subtext">Annual grid carbon emission</span>
+        </div>
+    </div>
+
+    <!-- Output: Capacity Layout -->
+    <div class="section-title">📊 PV Layout & Capacity Estimation</div>
+    <div class="result-card">
+        <div class="result-row">
+            <span class="result-label">Net PV Panel Area</span>
+            <span class="result-num">2,595 m²</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Est. System Capacity (kWp)</span>
+            <span class="result-num">519 kWp</span>
+        </div>
+    </div>
+
+    <!-- Output: Generation -->
+    <div class="section-title">☀️ Expected Annual Generation</div>
+    <div class="result-card">
+        <div class="result-row">
+            <span class="result-label">Annual Peak Sun Hours</span>
+            <span class="result-num" style="color:var(--text-main)">1,050 hours</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Total Annual Generation</span>
+            <span class="result-num" style="color:#0079c1">545,023 kWh/year</span>
+        </div>
+    </div>
+
+    <!-- Core Impact Metrics -->
+    <div class="highlight-box">
+        <div class="highlight-grid">
+            <div>
+                <div class="hl-title">⚡ Solar Self-Sufficiency</div>
+                <div class="hl-value">25.0%</div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+
+                <!-- Fixed Benchmark Comparison -->
+                <div class="gov-benchmark">
+                    <span class="status-pass">🟢 Meets Target (25.0%)</span>
+                    <div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>
+                </div>
+            </div>
+            <div>
+                <div class="hl-title">📉 Annual CO₂ Reduction</div>
+                <div class="hl-value">152.6 Tons</div>
+                <div class="hl-title" style="font-size:0.7rem; margin-top:2px; font-weight:normal;">(Offsets 25.0%)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliant Legal Reference Note -->
+    <div class="note">
+        <strong>* Technical References:</strong><br>
+        1. Total Roof Area includes Block A (3,375.6 m²) and Block B (744.0 m²). Net PV panel area accounts for 63% roof utilization.<br>
+        2. Meteorological baseline assumes 1,050 annual peak sun hours in the New Territories, HK, with a footprint allocation of 5 m² per 1 kWp.<br>
+        3. Compliance targeting is aligned with <strong>Joint Circular Ref. DEVB(W) 517/94/09 & EEB 7/2061/08</strong>, which mandates that for all new open space and public park projects, at least 25% of general public lighting electricity must be provided by renewable energy.
+    </div>
+</div>
+
+</body>
+</html>
