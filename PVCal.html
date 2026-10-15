@@ -25,73 +25,83 @@
             background-color: var(--bg-light);
             color: var(--text-main);
             margin: 0;
-            padding: 12px;
+            padding: 8px; /* 縮小邊距以適配 ExB 側欄 */
         }
 
         .container {
+            width: 100%;
             max-width: 550px;
             margin: 0 auto;
             background: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            border-top: 6px solid var(--hk-green);
-            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            border-top: 5px solid var(--hk-green);
+            padding: 14px; /* 緊湊內邊距 */
         }
 
         h2 {
             margin-top: 0;
             color: var(--hk-green);
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             text-align: center;
             border-bottom: 2px solid #e8f5e9;
-            padding-bottom: 12px;
-            line-height: 1.4;
+            padding-bottom: 10px;
+            line-height: 1.35;
         }
 
         .section-title {
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             font-weight: bold;
             color: var(--arcgis-blue);
-            margin: 18px 0 10px 0;
+            margin: 14px 0 8px 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        /* 靜態參數展示網格 (2x2) */
+        /* 核心修復：強制保持 2 欄，避免 ExB 側欄變為單列 */
         .param-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
 
         .param-card {
             background: #fafafa;
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 10px 12px;
+            padding: 8px 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            min-width: 0; /* 防止子元素溢出 */
         }
 
         .param-label {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .param-value {
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
             color: var(--text-main);
+            line-height: 1.2;
         }
 
         .param-subtext {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #757575;
             margin-top: 3px;
-            line-height: 1.2;
+            line-height: 1.25;
+            word-break: break-word;
         }
 
         /* Result Cards */
@@ -99,15 +109,15 @@
             background: #f9fbf9;
             border: 1px solid #e8f5e9;
             border-radius: 6px;
-            padding: 12px 15px;
-            margin-bottom: 12px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
         }
 
         .result-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 0;
+            padding: 5px 0;
             border-bottom: 1px dashed #e0e0e0;
         }
 
@@ -116,12 +126,12 @@
         }
 
         .result-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-main);
         }
 
         .result-num {
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: #1b5e20;
         }
@@ -130,30 +140,30 @@
         .highlight-box {
             background: #edf7ed;
             border-left: 4px solid var(--hk-green);
-            padding: 15px 12px;
+            padding: 12px 10px;
             border-radius: 0 6px 6px 0;
             text-align: center;
-            margin-top: 15px;
+            margin-top: 12px;
         }
 
         .highlight-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
 
         .hl-title {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
             font-weight: bold;
             text-transform: uppercase;
         }
 
         .hl-value {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             font-weight: bold;
             color: var(--hk-green);
-            margin: 6px 0;
+            margin: 4px 0;
         }
 
         /* Progress Bar */
@@ -169,45 +179,40 @@
         .progress-bar-fill {
             background: var(--hk-green);
             height: 100%;
-            width: 25.0%; /* 固定 25.0% */
+            width: 25.0%;
         }
 
-        /* Project Benchmarking Alert & Ref Card */
+        /* Project Benchmarking */
         .gov-benchmark {
-            font-size: 0.7rem;
-            margin-top: 8px;
+            font-size: 0.68rem;
+            margin-top: 6px;
             font-weight: 600;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 3px;
+            gap: 2px;
         }
         .status-pass { color: #2e7d32; }
 
         .ref-tag {
-            font-size: 0.6rem;
+            font-size: 0.58rem;
             color: #777777;
             font-weight: normal;
             font-style: italic;
-            max-width: 200px;
-            line-height: 1.2;
+            max-width: 180px;
+            line-height: 1.15;
         }
 
         .note {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             color: #888888;
-            margin-top: 15px;
+            margin-top: 12px;
             text-align: justify;
-            line-height: 1.4;
+            line-height: 1.35;
         }
 
-        /* 響應式 */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
+        /* 僅在極限超窄環境（如 < 340px）才允許折為單列 */
+        @media (max-width: 340px) {
             .param-grid {
                 grid-template-columns: 1fr;
             }
@@ -217,7 +222,7 @@
 <body>
 
 <div class="container">
-    <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">San Tin / Lok Ma Chau Development Node, HK</span></h2>
+    <h2>🌱 Building PV Capacity & Benefit Estimator<br><span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">San Tin / Lok Ma Chau Development Node, HK</span></h2>
 
     <!-- 固定參數展示 -->
     <div class="section-title">⚙️ Fixed Baseline Parameters</div>
@@ -226,12 +231,12 @@
         <div class="param-card">
             <span class="param-label">Total Roof Area</span>
             <span class="param-value">4,119.6 m²</span>
-            <span class="param-subtext">Block A: 3,375.6 m² | Block B: 744.0 m²</span>
+            <span class="param-subtext">Block A: 3,375.6 m²<br>Block B: 744.0 m²</span>
         </div>
 
         <!-- 參數 2: Roof Utilization Rate -->
         <div class="param-card">
-            <span class="param-label">Roof Utilization Rate</span>
+            <span class="param-label">Roof Utilization</span>
             <span class="param-value">63%</span>
             <span class="param-subtext">Designated panel footprint ratio</span>
         </div>
@@ -246,8 +251,8 @@
         <!-- 參數 4: Baseline Carbon OpEx -->
         <div class="param-card">
             <span class="param-label">Baseline Carbon OpEx</span>
-            <span class="param-value">609,599 kg CO₂e</span>
-            <span class="param-subtext">Annual grid carbon emission</span>
+            <span class="param-value">609,599 kg</span>
+            <span class="param-subtext">Annual CO₂e grid emissions</span>
         </div>
     </div>
 
@@ -285,7 +290,6 @@
                 <div class="hl-value">25.0%</div>
                 <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
 
-                <!-- Fixed Benchmark Comparison -->
                 <div class="gov-benchmark">
                     <span class="status-pass">🟢 Meets Target (25.0%)</span>
                     <div class="ref-tag">Ref: DEVB(W) 517/94/09 & EEB 7/2061/08</div>
@@ -294,17 +298,17 @@
             <div>
                 <div class="hl-title">📉 Annual CO₂ Reduction</div>
                 <div class="hl-value">152.6 Tons</div>
-                <div class="hl-title" style="font-size:0.7rem; margin-top:2px; font-weight:normal;">(Offsets 25.0%)</div>
+                <div class="hl-title" style="font-size:0.65rem; margin-top:2px; font-weight:normal;">(Offsets 25.0%)</div>
             </div>
         </div>
     </div>
 
-    <!-- Compliant Legal Reference Note -->
+    <!-- Technical Reference Note -->
     <div class="note">
         <strong>* Technical References:</strong><br>
-        1. Total Roof Area includes Block A (3,375.6 m²) and Block B (744.0 m²). Net PV panel area accounts for 63% roof utilization.<br>
-        2. Meteorological baseline assumes 1,050 annual peak sun hours in the New Territories, HK, with a footprint allocation of 5 m² per 1 kWp.<br>
-        3. Compliance targeting is aligned with <strong>Joint Circular Ref. DEVB(W) 517/94/09 & EEB 7/2061/08</strong>, which mandates that for all new open space and public park projects, at least 25% of general public lighting electricity must be provided by renewable energy.
+        1. Total Roof Area includes Block A (3,375.6 m²) and Block B (744.0 m²). Net panel area uses 63% utilization.<br>
+        2. Assumes 1,050 annual peak sun hours in New Territories, HK (footprint 5 m² per 1 kWp).<br>
+        3. Compliance target aligned with <strong>Joint Circular DEVB(W) 517/94/09 & EEB 7/2061/08</strong> (≥25% RE target).
     </div>
 </div>
 
